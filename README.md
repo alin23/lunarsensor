@@ -31,7 +31,7 @@ Your actual sensor reading logic should be written in that function.
 
 * Check if one-shot lux reading works
 
-```json
+```sh
 ❯ curl lunarsensor.local/sensor/ambient_light_tsl2561
 
 {"id":"sensor-ambient_light_tsl2561", "state":"0 lx", "value":0.000000}
@@ -39,7 +39,7 @@ Your actual sensor reading logic should be written in that function.
 
 * Check if the EventSource is sending lux values every 2 seconds
 
-```json
+```sh
 ❯ curl lunarsensor.local/events
 
 event: state
