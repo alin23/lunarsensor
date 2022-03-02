@@ -1,6 +1,10 @@
-# [Lunar](https://github.com/alin23/Lunar) Sensor
+<p align="center">
+    <a href="https://lunar.fyi/"><img width="128" height="128" src="https://static.lunar.fyi/svg/lunar.svg"></a>
+  <h1 align="center"><code>Lunar Sensor</code></h1>
+  <h4 align="center">Create a custom Ambient Light Sensor on any device</h4>
+</p>
 
-## Server that implements a custom Ambient Light Sensor for adapting monitor brightness with Lunar
+## This is a server that implements a custom Ambient Light Sensor for adapting monitor brightness with Lunar
 
 ### Requirements
 
@@ -23,7 +27,7 @@ make run
 
 ### Implementing light sensor reading
 
-The file `lunarsensor.py` contains a server that reads [lux](https://en.wikipedia.org/wiki/Lux) values using the [`read_lux()`](lunarsensor.py#L59-L63) function at the bottom of the file.
+The file `lunarsensor.py` contains a server that reads [lux](https://en.wikipedia.org/wiki/Lux) values using the [`read_lux()`](lunarsensor.py#L53-L57) function at the bottom of the file.
 
 Your actual sensor reading logic should be written in that function.
 
@@ -32,9 +36,9 @@ Your actual sensor reading logic should be written in that function.
 * Check if one-shot lux reading works
 
 ```sh
-❯ curl lunarsensor.local/sensor/ambient_light_tsl2561
+❯ curl lunarsensor.local/sensor/ambient_light
 
-{"id":"sensor-ambient_light_tsl2561", "state":"0 lx", "value":0.000000}
+{"id":"sensor-ambient_light", "state":"0 lx", "value":0.000000}
 ```
 
 * Check if the EventSource is sending lux values every 2 seconds
@@ -43,13 +47,13 @@ Your actual sensor reading logic should be written in that function.
 ❯ curl lunarsensor.local/events
 
 event: state
-data: {"id": "sensor-ambient_light_tsl2561", "state": "400.0 lx", "value": 400.0}
+data: {"id": "sensor-ambient_light", "state": "400.0 lx", "value": 400.0}
 
 event: state
-data: {"id": "sensor-ambient_light_tsl2561", "state": "400.0 lx", "value": 400.0}
+data: {"id": "sensor-ambient_light", "state": "400.0 lx", "value": 400.0}
 
 event: state
-data: {"id": "sensor-ambient_light_tsl2561", "state": "400.0 lx", "value": 400.0}
+data: {"id": "sensor-ambient_light", "state": "400.0 lx", "value": 400.0}
 ```
 
 ---
