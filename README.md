@@ -23,7 +23,7 @@ make run
 
 ### Implementing light sensor reading
 
-The file `lunarsensor.py` contains a server that reads [lux](https://en.wikipedia.org/wiki/Lux) values using the [`read_lux()`](lunarsensor.py#L40) function at the bottom of the file.
+The file `lunarsensor.py` contains a server that reads [lux](https://en.wikipedia.org/wiki/Lux) values using the [`read_lux()`](lunarsensor.py#L59-L63) function at the bottom of the file.
 
 Your actual sensor reading logic should be written in that function.
 
@@ -56,11 +56,11 @@ data: {"id": "sensor-ambient_light_tsl2561", "state": "400.0 lx", "value": 400.0
 
 ### Implementation examples
 
-#### Reading from a [BH1750](https://learn.adafruit.com/adafruit-bh1750-ambient-light-sensor) I2C sensor
+#### Reading from a [BH1750](https://learn.adafruit.com/adafruit-bh1750-ambient-light-sensor) I²C sensor
 
-1. Install the Adafruit BH1750 library
-    - `pip3 install adafruit-circuitpython-bh1750`
-2. Replace the `read_lux()` function with the following code at the bottom of the [`lunarsensor.py`](lunarsensor.py#L37-L41) file
+```sh
+pip3 install adafruit-circuitpython-bh1750
+```
 
 ```python
 # Do the sensor reading logic below
@@ -84,14 +84,13 @@ async def read_lux():
     dynamic_adjust_resolution(lux)
 
     return lux
-
 ```
 
-#### Reading from a [VEML7700](https://learn.adafruit.com/adafruit-veml7700) I2C sensor
+#### Reading from a [VEML7700](https://learn.adafruit.com/adafruit-veml7700) I²C sensor
 
-1. Install the Adafruit VEML7700 library
-    - `pip3 install adafruit-circuitpython-veml7700`
-2. Replace the `read_lux()` function with the following code at the bottom of the [`lunarsensor.py`](lunarsensor.py#L37-L41) file
+```sh
+pip3 install adafruit-circuitpython-veml7700
+```
 
 ```python
 # Do the sensor reading logic below
@@ -124,7 +123,24 @@ async def read_lux():
     dynamic_adjust_resolution(lux)
 
     return lux
+```
 
+#### Reading from a [HomeAssistant](https://developers.home-assistant.io/docs/api/rest/) lux sensor
+
+```python
+# Do the sensor reading logic below
+
+HOME_ASSISTANT_URL = "http://homeassistant.local:8123"  # Replace with your HomeAssistant server URL
+TOKEN = "your.jwt.token"  # Replace with your long-lived HomeAssistant API token
+SENSOR_ENTITY_ID = "sensor.living_room_ambient_light"  # Replace with your sensor entity id
+
+async def read_lux():
+    async with CLIENT.get(f"{HOME_ASSISTANT_URL}/api/states/{SENSOR_ENTITY_ID}", headers={"Authorization": f"Bearer {TOKEN}"}) as response:
+        sensor = await response.json()
+        if not json:
+            return None
+
+        return float(sensor["state"])
 ```
 
 ---

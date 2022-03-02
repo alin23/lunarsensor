@@ -1,3 +1,4 @@
 fastapi==0.74.1
 sse-starlette==0.10.3
 uvicorn==0.17.5
+aiohttp==3.8.1

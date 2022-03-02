@@ -1,19 +1,41 @@
+import json
+import logging
 import os
 import time
-import json
 
+import aiohttp
 import uvicorn
 from fastapi import FastAPI, Request
 from sse_starlette.sse import EventSourceResponse
 
 app = FastAPI()
+logging.basicConfig()
 
 POLLING_SECONDS = 2
+CLIENT = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=8))
+last_lux = 400
+
+
+@app.on_event("startup")
+async def startup_event():
+    await CLIENT.__aenter__()
 
 
 async def make_lux_response():
-    lux = await read_lux()
-    return {"id": "sensor-ambient_light_tsl2561", "state": f"{lux} lx", "value": lux}
+    global last_lux
+    try:
+        lux = await read_lux()
+    except Exception as exc:
+        logging.exception(exc)
+    else:
+        if lux:
+            last_lux = lux
+
+    return {
+        "id": "sensor-ambient_light_tsl2561",
+        "state": f"{last_lux} lx",
+        "value": last_lux,
+    }
 
 
 async def sensor_reader(request):
@@ -38,4 +60,4 @@ async def events(request: Request):
 
 
 async def read_lux():
-    return 400.00
+    return 400  # Just a default lux value for testing
