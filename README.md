@@ -4,7 +4,9 @@
   <h4 align="center">Create a custom Ambient Light Sensor on any device</h4>
 </p>
 
-## This is a server that implements a custom Ambient Light Sensor for adapting monitor brightness with Lunar
+---
+
+This is a server that implements a custom Ambient Light Sensor for adapting monitor brightness with the [Lunar macOS app](https://lunar.fyi/).
 
 ### Requirements
 
