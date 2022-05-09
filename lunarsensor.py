@@ -10,12 +10,13 @@ app = FastAPI()
 logging.basicConfig()
 
 POLLING_SECONDS = 2
-CLIENT = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=8))
+CLIENT = None
 last_lux = 400
 
 
 @app.on_event("startup")
 async def startup_event():
+    CLIENT = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=8))
     await CLIENT.__aenter__()
 
 
