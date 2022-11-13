@@ -16,6 +16,8 @@ last_lux = 400
 
 @app.on_event("startup")
 async def startup_event():
+    global CLIENT
+    
     CLIENT = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=8))
     await CLIENT.__aenter__()
 
