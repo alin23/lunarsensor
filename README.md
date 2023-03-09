@@ -19,10 +19,14 @@ This is a server that implements a custom Ambient Light Sensor for adapting moni
 # Installs dependencies and runs the server
 make
 
-# OR
-
 # Runs the server without installing dependencies
 make run
+
+# If IPv6 is not available use HOST
+make run HOST=0.0.0.0
+
+# Listen on another port using the PORT variable
+make run PORT=8080
 ```
 
 ---
@@ -153,25 +157,43 @@ async def read_lux():
 
 ### Pointing Lunar to the sensor server
 
-Lunar expects to find the sensor at the `lunarsensor.local` address.
+Lunar expects to find the sensor at the `lunarsensor.local` address by default.
 
-Since the sensor server can be run anywhere (e.g. Raspberry Pi, NAS, PC etc), changing the hostname might not be desirable. 
+#### Lunar v6 (not yet released)
+
+This can be changed using the `defaults` command on the Mac where Lunar is running.
+
+There are three settings that affect where Lunar looks for the sensor:
+
+- `sensorHostname` set by default to `lunarsensor.local`
+- `sensorPort` set by default to `80`
+- `sensorPathPrefix` set by default to `/`
+
+For example, if you would like to have Lunar listen for sensor events at `homeassistant.local:8123/lunar/events` you would run the following commands:
+
+```sh
+defaults write fyi.lunar.Lunar sensorHostname homeassistant.local
+defaults write fyi.lunar.Lunar sensorPort 8123
+defaults write fyi.lunar.Lunar sensorPathPrefix /lunar
+```
+
+#### Lunar v5
 
 You can map the hostname to the sensor server IP using the `/etc/hosts` file on the Mac device where Lunar is running.
 
+##### Example of `/etc/hosts` change at the end
+  ```diff
+  ##
+  # Host Database
+  #
+  # localhost is used to configure the loopback interface
+  # when the system is booting.  Do not change this entry.
+  ##
+  127.0.0.1   localhost
+  255.255.255.255 broadcasthost
+  ::1             localhost
+  For example, if you would like to have Lunar listen for sensor events at `homeassistant.local:8123/lunar/events` you would run the follo  wing commands:
 
-#### Example of `/etc/hosts` change at the end
-```diff
-##
-# Host Database
-#
-# localhost is used to configure the loopback interface
-# when the system is booting.  Do not change this entry.
-##
-127.0.0.1   localhost
-255.255.255.255 broadcasthost
-::1             localhost
-
-+ # Added for Lunar sensor server
-+ 192.168.0.203    lunarsensor.local
-```
+  + # Added for Lunar sensor server
+  + 192.168.0.203    lunarsensor.local
+  ```

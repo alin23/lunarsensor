@@ -6,6 +6,7 @@ install:
 
 run: SENSOR_DEBUG=0
 run: PORT=80
+run: HOST=::
 run:
 	test -f /bin/launchctl && sudo launchctl bootout system/org.apache.httpd 2>/dev/null || true
-	sudo -E uvicorn --host 0.0.0.0 --port $(PORT) --reload lunarsensor:app
+	sudo -E uvicorn --host $(HOST) --port $(PORT) --reload lunarsensor:app
