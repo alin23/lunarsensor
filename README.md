@@ -159,7 +159,7 @@ async def read_lux():
 
 Lunar expects to find the sensor at the `lunarsensor.local` address by default.
 
-#### Lunar v6 (not yet released)
+#### Lunar v6
 
 This can be changed using the `defaults` command on the Mac where Lunar is running.
 
