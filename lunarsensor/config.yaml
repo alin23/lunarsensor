@@ -1,0 +1,22 @@
+name: "Lunar Sensor"
+description: "Lunar sensor"
+version: "1.0.0"
+slug: "lunar_sensor"
+init: false
+homeassistant_api: true
+auth_api: true
+hassio_api: true
+arch:
+  - aarch64
+  - amd64
+  - armhf
+  - armv7
+  - i386
+ports:
+  8000/tcp: 8899
+ports_description:
+  8000/tcp: API interface
+options:
+  sensor_entity_id: null
+schema:
+  sensor_entity_id: "str"
