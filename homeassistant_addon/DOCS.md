@@ -6,9 +6,10 @@ Ambient light sensor that can send data to the **[🌕 Lunar](https://lunar.fyi/
 
 Follow these steps to get the add-on installed on your system:
 
-1. Navigate in your Home Assistant frontend to **Settings** -> **Add-ons** -> **Add-on store**.
-2. Find the "Lunar Sensor" add-on and click it.
-3. Click on the "INSTALL" button.
+[![Open your Home Assistant instance and show the Supervisor add-on store.](https://my.home-assistant.io/badges/supervisor_store.svg)](https://my.home-assistant.io/redirect/supervisor_store/)
+
+![adding the lunarsensor repo to HomeAssistant addons](https://files.lunar.fyi/ha-addon-lunar-repo-adding.png)
+
 
 ## How to use
 
