@@ -11,7 +11,6 @@ This is a server that implements a custom Ambient Light Sensor for adapting moni
 ### Requirements
 
 * Python 3.6+
-* Access to binding port `80`
 
 ### Running the server
 
@@ -50,7 +49,7 @@ Your actual sensor reading logic should be written in that function.
 * Check if the EventSource is sending lux values every 2 seconds
 
 ```sh
-❯ curl lunarsensor.local/events
+❯ curl -N lunarsensor.local/events
 
 event: state
 data: {"id": "sensor-ambient_light", "state": "400.0 lx", "value": 400.0}
@@ -159,8 +158,6 @@ async def read_lux():
 
 Lunar expects to find the sensor at the `lunarsensor.local` address by default.
 
-#### Lunar v6
-
 This can be changed using the `defaults` command on the Mac where Lunar is running.
 
 There are three settings that affect where Lunar looks for the sensor:
@@ -176,24 +173,3 @@ defaults write fyi.lunar.Lunar sensorHostname homeassistant.local
 defaults write fyi.lunar.Lunar sensorPort 8123
 defaults write fyi.lunar.Lunar sensorPathPrefix /lunar
 ```
-
-#### Lunar v5
-
-You can map the hostname to the sensor server IP using the `/etc/hosts` file on the Mac device where Lunar is running.
-
-##### Example of `/etc/hosts` change at the end
-  ```diff
-  ##
-  # Host Database
-  #
-  # localhost is used to configure the loopback interface
-  # when the system is booting.  Do not change this entry.
-  ##
-  127.0.0.1   localhost
-  255.255.255.255 broadcasthost
-  ::1             localhost
-  For example, if you would like to have Lunar listen for sensor events at `homeassistant.local:8123/lunar/events` you would run the follo  wing commands:
-
-  + # Added for Lunar sensor server
-  + 192.168.0.203    lunarsensor.local
-  ```
