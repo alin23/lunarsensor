@@ -65,7 +65,15 @@ data: {"id": "sensor-ambient_light", "state": "400.0 lx", "value": 400.0}
 
 ### Implementation examples
 
-#### Reading from a [BH1750](https://learn.adafruit.com/adafruit-bh1750-ambient-light-sensor) I²C sensor
+#### 1. [HomeAssistant addon](homeassistant_addon)
+
+An easily installable addon that runs the server on port 8899 and polls a sensor entity for lux values.
+
+[![Open your Home Assistant instance and show the Supervisor add-on store.](https://my.home-assistant.io/badges/supervisor_store.svg)](https://my.home-assistant.io/redirect/supervisor_store/)
+
+![adding the lunarsensor repo to HomeAssistant addons](https://files.lunar.fyi/ha-addon-lunar-repo-adding.png)
+
+#### 2. Reading from a [BH1750](https://learn.adafruit.com/adafruit-bh1750-ambient-light-sensor) I²C sensor
 
 ```sh
 pip3 install adafruit-circuitpython-bh1750
@@ -95,7 +103,7 @@ async def read_lux():
     return lux
 ```
 
-#### Reading from a [VEML7700](https://learn.adafruit.com/adafruit-veml7700) I²C sensor
+#### 3. Reading from a [VEML7700](https://learn.adafruit.com/adafruit-veml7700) I²C sensor
 
 ```sh
 pip3 install adafruit-circuitpython-veml7700
@@ -134,7 +142,7 @@ async def read_lux():
     return lux
 ```
 
-#### Reading from a [HomeAssistant](https://developers.home-assistant.io/docs/api/rest/) lux sensor
+#### 4. Reading from a [HomeAssistant](https://developers.home-assistant.io/docs/api/rest/) lux sensor
 
 ```python
 # Do the sensor reading logic below
