@@ -33,22 +33,14 @@ Set it to the `entity_id` of the lux sensor you want to use for adapting monitor
 
 ## Lunar app configuration
 
-For Lunar to be able to find this sensor, a few settings need to be changed from the command-line.
+Since [v6.2.4](https://lunar.fyi/changelog#6_2_4), Lunar will automatically connect to this addon if it's available on `homeassistant.local:8899`.
 
-There are three settings that affect where Lunar looks for the sensor:
-
-- `sensorHostname` set by default to `lunarsensor.local`
-- `sensorPort` set by default to `80`
-- `sensorPathPrefix` set by default to `/`
-
-To have Lunar connect to this addon, run the following commands on your Mac running Lunar:
+If the HomeAssistant instance is available on a different hostname, configure Lunar by running the following commands on your Mac:
 
 ```sh
-defaults write fyi.lunar.Lunar sensorHostname homeassistant.local
+defaults write fyi.lunar.Lunar sensorHostname your-homeassistant-hostname
 defaults write fyi.lunar.Lunar sensorPort 8899
 ```
-
-*Note: change the port and host values if you configured them differently*
 
 ## Troubleshooting
 
