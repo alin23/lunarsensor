@@ -8,33 +8,33 @@
 
 This is a server that implements a custom Ambient Light Sensor for adapting monitor brightness with the [Lunar macOS app](https://lunar.fyi/).
 
+The server announces itself over mDNS as `_lunarsensor._tcp`, so recent Lunar versions discover it automatically the moment it starts.
+
 ### Requirements
 
-* Python 3.6+
+* [uv](https://docs.astral.sh/uv/) (`brew install uv`). It manages the Python version and dependencies; nothing else to install.
 
 ### Running the server
 
 ```sh
-# Installs dependencies and runs the server
+# Installs dependencies (into .venv) and runs the server on port 80 (needs sudo)
 make
 
-# Runs the server without installing dependencies
-make run
+# Rootless: run on port 8080 (set the same port in Lunar's sensor settings)
+make run-user
 
-# If IPv6 is not available use HOST
-make run HOST=0.0.0.0
-
-# Listen on another port using the PORT variable
+# Override host or port
 make run PORT=8080
+make run HOST=0.0.0.0
 ```
 
 ---
 
 ### Implementing light sensor reading
 
-The file `lunarsensor.py` contains a server that reads [lux](https://en.wikipedia.org/wiki/Lux) values using the [`read_lux()`](lunarsensor.py#L53-L57) function at the bottom of the file.
+The file `lunarsensor.py` contains a server that reads [lux](https://en.wikipedia.org/wiki/Lux) values using the [`read_lux()`](lunarsensor.py) function at the bottom of the file.
 
-Your actual sensor reading logic should be written in that function.
+Your actual sensor reading logic should be written in that function. If your sensor also measures ambient color, implement [`read_color_temperature()`](lunarsensor.py) too (return Kelvin): Lunar uses it to drive True Tone for external monitors.
 
 #### Testing the server
 
