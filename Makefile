@@ -1,13 +1,21 @@
 .EXPORT_ALL_VARIABLES:
-all: install run
+all: run
 
+# Dependencies are managed by uv (https://docs.astral.sh/uv/): `uv sync` creates .venv
+# with a compatible Python (downloads one when needed) and the locked dependencies.
 install:
-	pip install -r requirements.txt
+	uv sync
 
-run: SENSOR_DEBUG=0
+# Lunar looks for the sensor on port 80, which needs root; the server also announces
+# itself over mDNS (_lunarsensor._tcp) so Lunar finds it right away.
 run: PORT=80
 run: HOST=::
-run: UVICORN=$(shell which uvicorn)
-run:
+run: install
 	test -f /bin/launchctl && sudo launchctl bootout system/org.apache.httpd 2>/dev/null || true
-	sudo -E $(UVICORN) --host $(HOST) --port $(PORT) --reload lunarsensor:app
+	sudo -E .venv/bin/lunarsensor
+
+# Rootless alternative on a high port (set the same port in Lunar's sensor settings).
+run-user: PORT=8080
+run-user: HOST=::
+run-user: install
+	.venv/bin/lunarsensor
