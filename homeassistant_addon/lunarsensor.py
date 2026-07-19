@@ -31,9 +31,10 @@ HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "8899"))
 
 HOME_ASSISTANT_URL = os.getenv("HOME_ASSISTANT_URL", "http://supervisor/core")
-SENSOR_ENTITY_ID = os.getenv("SENSOR_ENTITY_ID")
+# Both are optional. With no lux entity configured the add-on picks one itself at startup
+# (see `discover_lux_entity`), so a fresh install needs no configuration at all.
+SENSOR_ENTITY_ID = os.getenv("SENSOR_ENTITY_ID") or None
 COLOR_ENTITY_ID = os.getenv("COLOR_ENTITY_ID") or None
-_LOGGER.info(f"Using lux sensor {SENSOR_ENTITY_ID}, color sensor {COLOR_ENTITY_ID or 'none'}")
 
 CLIENT: aiohttp.ClientSession | None = None
 ZEROCONF: AsyncZeroconf | None = None
@@ -81,12 +82,67 @@ async def register_mdns() -> None:
         ZEROCONF = None
 
 
+async def discover_lux_entity() -> str | None:
+    """Find the ambient light entity when the user didn't name one.
+
+    This is what lets the add-on be installed with a single click and no configuration: it asks
+    Home Assistant for everything with `device_class: illuminance` and takes the only candidate.
+    With more than one it refuses to guess, listing them so the user can set `sensor_entity_id`.
+    """
+    if not CLIENT:
+        return None
+
+    supervisor_token = os.getenv("SUPERVISOR_TOKEN")
+    try:
+        async with CLIENT.get(
+            f"{HOME_ASSISTANT_URL}/api/states",
+            headers={"Authorization": f"Bearer {supervisor_token}"},
+        ) as response:
+            states = await response.json()
+    except Exception as exc:
+        _LOGGER.warning(f"Could not list entities to find a light sensor: {exc}")
+        return None
+
+    candidates = []
+    for state in states or []:
+        attributes = state.get("attributes") or {}
+        if attributes.get("device_class") != "illuminance":
+            continue
+        # An entity that isn't reporting a number right now can't drive brightness.
+        try:
+            float(state.get("state"))
+        except (TypeError, ValueError):
+            continue
+        candidates.append(state["entity_id"])
+
+    if not candidates:
+        _LOGGER.error(
+            "No entity with device_class 'illuminance' found in Home Assistant. "
+            "Set sensor_entity_id in the add-on configuration if your sensor uses a different class."
+        )
+        return None
+    if len(candidates) > 1:
+        _LOGGER.error(
+            f"Found several light sensors ({', '.join(sorted(candidates))}). "
+            "Set sensor_entity_id in the add-on configuration to pick one."
+        )
+        return None
+
+    _LOGGER.info(f"Using {candidates[0]} (the only illuminance sensor in Home Assistant)")
+    return candidates[0]
+
+
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
-    global CLIENT
+    global CLIENT, SENSOR_ENTITY_ID
 
     async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=8)) as client:
         CLIENT = client
+        if not SENSOR_ENTITY_ID:
+            SENSOR_ENTITY_ID = await discover_lux_entity()
+        _LOGGER.info(
+            f"Using lux sensor {SENSOR_ENTITY_ID or 'none'}, color sensor {COLOR_ENTITY_ID or 'none'}"
+        )
         await register_mdns()
         yield
         if ZEROCONF is not None:
@@ -116,6 +172,10 @@ async def read_entity_state(entity_id: str) -> float | None:
 
 
 async def read_lux() -> float | None:
+    # Nothing configured and nothing auto-discovered: keep serving the last value rather than
+    # throwing on every poll. The startup log says what to fix.
+    if not SENSOR_ENTITY_ID:
+        return None
     return await read_entity_state(SENSOR_ENTITY_ID)
 
 

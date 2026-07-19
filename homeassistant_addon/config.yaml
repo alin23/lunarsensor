@@ -1,7 +1,7 @@
 name: "Lunar Sensor"
 description: "Ambient light sensor that can send data to the Lunar macOS app for controlling monitor brightness automatically."
 url: https://github.com/alin23/lunarsensor/tree/main/homeassistant_addon
-version: "2.0.0"
+version: "2.1.0"
 slug: "lunar_sensor"
 init: false
 homeassistant_api: true
@@ -17,9 +17,11 @@ arch:
   - armhf
   - armv7
   - i386
+# Both optional: left empty, the add-on picks the only entity with device_class `illuminance`
+# it can find, so a one-click install needs no configuration.
 options:
   sensor_entity_id: null
   color_entity_id: null
 schema:
-  sensor_entity_id: "str"
+  sensor_entity_id: "str?"
   color_entity_id: "str?"
