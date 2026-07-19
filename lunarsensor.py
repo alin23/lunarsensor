@@ -41,6 +41,9 @@ ZEROCONF = None
 last_lux = 400.0
 last_cct = None
 supports_color = False
+# Sensor reads are usually blocking (a file, a serial port, an I2C bus) and several clients
+# can be streaming at once. Serialize them so two readers can't interleave on the same device.
+sensor_lock = asyncio.Lock()
 
 
 def local_ip():
@@ -175,12 +178,21 @@ def main():
 # Do the sensor reading logic below
 
 
-async def read_lux():
+def _sync_read_lux():
+    """Blocking part of the reading. Runs in a worker thread, so it's safe to do real I/O here."""
     if os.path.exists("/tmp/lux"):
         with open("/tmp/lux") as f:
             return float(f.read().strip() or "400.0")
 
     return 400.00
+
+
+async def read_lux():
+    # Offloaded to the default executor and serialized with `sensor_lock`: doing blocking I/O
+    # directly on the event loop stalls every connected client, including the SSE streams.
+    loop = asyncio.get_running_loop()
+    async with sensor_lock:
+        return await loop.run_in_executor(None, _sync_read_lux)
 
 
 async def read_color_temperature():
@@ -189,9 +201,16 @@ async def read_color_temperature():
     Implementing this (e.g. from a TCS34725) lets Lunar adapt the white point of
     external monitors to the room's light (True Tone). Example with /tmp/cct:
 
-        if os.path.exists("/tmp/cct"):
-            with open("/tmp/cct") as f:
-                return float(f.read().strip() or "6500")
+        def _sync_read_cct():
+            if os.path.exists("/tmp/cct"):
+                with open("/tmp/cct") as f:
+                    return float(f.read().strip() or "6500")
+
+        loop = asyncio.get_running_loop()
+        async with sensor_lock:
+            return await loop.run_in_executor(None, _sync_read_cct)
+
+    Use the same executor + `sensor_lock` shape as `read_lux` above if the reading blocks.
     """
     return None
 

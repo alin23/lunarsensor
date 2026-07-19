@@ -160,6 +160,40 @@ async def read_lux():
         return float(sensor["state"])
 ```
 
+#### 5. Reading from a [Phillips Hue API](https://developers.meethue.com/develop/get-started-2/) motion sensor
+
+```python
+import math
+
+# Do the sensor reading logic below
+
+HUE_API_URL = os.getenv("HUE_API_URL") # set env variable to: http://<bridge_ip_address>/api/<user_id>
+HUE_SENSOR_ID = os.getenv("HUE_SENSOR_ID") # send GET request to $HUE_API_URL/sensors and search for "Hue ambient light sensor"
+
+async def read_lux():
+    async with CLIENT.get(f"{HUE_API_URL}/sensors/{HUE_SENSOR_ID}") as response:
+        sensor = await response.json()
+        if not json:
+            return None
+        
+        # Converting light level measured by sensor: 10000*log10(lux)+1
+        lightlevel = sensor['state']['lightlevel']
+        lux = lightlevel - 1
+        lux = lux / 10000
+        lux = math.pow(10, lux)
+
+        return float(lux)
+```
+
+
+### Running in Docker
+
+Example for starting on `localhost:8080`
+
+```shell
+docker build -t lunarsensor .
+docker run -p 127.0.0.1:8080:80 -d lunarsensor 
+```
 ---
 
 ### Pointing Lunar to the sensor server
