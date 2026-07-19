@@ -1,23 +1,25 @@
 name: "Lunar Sensor"
 description: "Ambient light sensor that can send data to the Lunar macOS app for controlling monitor brightness automatically."
 url: https://github.com/alin23/lunarsensor/tree/main/homeassistant_addon
-version: "1.0.0"
+version: "2.0.0"
 slug: "lunar_sensor"
 init: false
 homeassistant_api: true
 auth_api: true
 hassio_api: true
+# Host networking: the addon listens on port 8899 directly and can announce itself
+# over mDNS (multicast doesn't leave the container network otherwise), so Lunar
+# discovers it without polling.
+host_network: true
 arch:
   - aarch64
   - amd64
   - armhf
   - armv7
   - i386
-ports:
-  8000/tcp: 8899
-ports_description:
-  8000/tcp: API interface
 options:
   sensor_entity_id: null
+  color_entity_id: null
 schema:
   sensor_entity_id: "str"
+  color_entity_id: "str?"

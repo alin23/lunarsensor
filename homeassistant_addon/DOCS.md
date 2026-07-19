@@ -31,9 +31,19 @@ sensor_entity_id: "sensor.lux"
 
 Set it to the `entity_id` of the lux sensor you want to use for adapting monitor brightness.
 
+### Option: `color_entity_id` (optional)
+
+The `entity_id` of a color temperature sensor (in Kelvin). When set, Lunar can adapt
+the white point of external monitors to the room's light (True Tone).
+
 ## Lunar app configuration
 
-Since [v6.2.4](https://lunar.fyi/changelog#6_2_4), Lunar will automatically connect to this addon if it's available on `homeassistant.local:8899`.
+The addon announces itself over mDNS as `_lunarsensor._tcp`, so recent Lunar versions
+discover it automatically the moment it starts (no configuration needed). For this to
+work the addon runs with host networking.
+
+Older Lunar versions connect to the addon at `homeassistant.local:8899` (since
+[v6.2.4](https://lunar.fyi/changelog#6_2_4)).
 
 If the HomeAssistant instance is available on a different hostname, configure Lunar by running the following commands on your Mac:
 
