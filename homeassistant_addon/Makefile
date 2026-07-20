@@ -30,7 +30,11 @@ BASE_aarch64 = ghcr.io/hassio-addons/base-python:17.0.0
 BASE_amd64   = ghcr.io/hassio-addons/base-python:17.0.0
 BASE_armv7   = ghcr.io/hassio-addons/base-python:17.0.0
 
-.PHONY: all build push login print-version $(addprefix build-,$(ARCHES)) $(addprefix push-,$(ARCHES))
+# NOTE: build-<arch> and push-<arch> are deliberately NOT listed here. GNU make refuses to
+# apply a pattern rule to a target declared .PHONY, so marking them phony makes `make push`
+# print "Nothing to be done" and exit 0 — the recipes never run, and only the final `@echo`
+# is left to claim success. That silently pushed nothing at all.
+.PHONY: all build push login print-version
 
 all: build
 
@@ -69,6 +73,14 @@ build: $(addprefix build-,$(ARCHES))
 	@echo "built $(NAME) $(VERSION) for: $(ARCHES)"
 
 push: $(addprefix push-,$(ARCHES))
+	@echo
+	@echo "verifying every image is really on the registry"
+	@for a in $(ARCHES); do \
+		docker manifest inspect $(REGISTRY)/$(NAME)-$$a:$(VERSION) >/dev/null 2>&1 \
+			|| { echo "FAIL: $(REGISTRY)/$(NAME)-$$a:$(VERSION) is not on the registry" >&2; exit 1; }; \
+		echo "   $(NAME)-$$a:$(VERSION) OK"; \
+	done
+	@echo
 	@echo "pushed $(NAME) $(VERSION) for: $(ARCHES)"
 	@echo "Make the packages public in the GitHub UI on first publish, or the Supervisor"
 	@echo "cannot pull them anonymously."

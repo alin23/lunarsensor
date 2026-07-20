@@ -1,0 +1,6 @@
+# The Dockerfile only COPYs three named files, so nothing else can reach the image today.
+# This keeps it that way if a `COPY . .` is ever added, and keeps the build context small.
+*
+!requirements.txt
+!run.sh
+!lunarsensor.py
