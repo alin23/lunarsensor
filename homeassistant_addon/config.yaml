@@ -1,7 +1,7 @@
 name: "Lunar Sensor"
 description: "Ambient light sensor that can send data to the Lunar macOS app for controlling monitor brightness automatically."
 url: https://github.com/alin23/lunarsensor/tree/main/homeassistant_addon
-version: "2.1.0"
+version: "2.1.1"
 slug: "lunar_sensor"
 init: false
 homeassistant_api: true
@@ -11,12 +11,21 @@ hassio_api: true
 # over mDNS (multicast doesn't leave the container network otherwise), so Lunar
 # discovers it without polling.
 host_network: true
+# armhf and i386 are deliberately absent: the base image is Alpine/musl with no compiler,
+# and aiohttp/zeroconf/pydantic-core publish no musllinux wheels for either, so the build
+# died on the user's own box with a raw cargo error rather than a clear "unsupported".
+# The three below cover every machine Home Assistant OS actually ships on: Pi 4/5 and ARM
+# VMs (aarch64), x86 VMs and mini-PCs (amd64), Pi 3 and older 32-bit HA OS (armv7).
 arch:
   - aarch64
   - amd64
-  - armhf
   - armv7
-  - i386
+# Prebuilt images, so installing the add-on is a pull rather than a build on the user's box.
+# The Supervisor substitutes {arch} and uses `version` above as the tag, so every release must
+# have all three images pushed BEFORE config.yaml's version is bumped in a published repo —
+# otherwise the Supervisor pulls a tag that does not exist yet and the install fails.
+# Build and push with: make -C homeassistant_addon push
+image: "ghcr.io/alin23/lunarsensor-{arch}"
 # Both optional: left empty, the add-on picks the only entity with device_class `illuminance`
 # it can find, so a one-click install needs no configuration.
 options:

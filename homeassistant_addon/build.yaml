@@ -1,7 +1,7 @@
 ---
+# Keep in step with `arch:` in config.yaml. armhf and i386 are omitted on purpose:
+# no musllinux wheels for aiohttp/zeroconf/pydantic-core, and this base has no compiler.
 build_from:
   aarch64: ghcr.io/hassio-addons/base-python:17.0.0
   amd64: ghcr.io/hassio-addons/base-python:17.0.0
-  armhf: ghcr.io/hassio-addons/base-python:17.0.0
   armv7: ghcr.io/hassio-addons/base-python:17.0.0
-  i386: ghcr.io/hassio-addons/base-python:17.0.0
