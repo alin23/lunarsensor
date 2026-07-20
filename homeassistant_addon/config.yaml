@@ -1,7 +1,7 @@
 name: "Lunar Sensor"
 description: "Ambient light sensor that can send data to the Lunar macOS app for controlling monitor brightness automatically."
 url: https://github.com/alin23/lunarsensor/tree/main/homeassistant_addon
-version: "2.1.1"
+version: "2.2.0"
 slug: "lunar_sensor"
 init: false
 homeassistant_api: true

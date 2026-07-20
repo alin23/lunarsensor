@@ -13,6 +13,7 @@ import json
 import logging
 import os
 import socket
+import time
 
 import aiohttp
 import uvicorn
@@ -38,8 +39,21 @@ COLOR_ENTITY_ID = os.getenv("COLOR_ENTITY_ID") or None
 
 CLIENT: aiohttp.ClientSession | None = None
 ZEROCONF: AsyncZeroconf | None = None
-last_lux = 400.0
+# None, never a number. This used to be seeded to 400.0 and returned on every failure path,
+# so an add-on with no illuminance entity found, or a rejected Supervisor token, served a
+# plausible office reading forever — and nothing downstream could tell it from a real one.
+# Lunar would adapt confidently to a constant. No reading now means no reading: the
+# endpoints answer 503 and the event stream stays quiet.
+last_lux: float | None = None
+# Monotonic timestamp of the last REAL reading, so a stale one can be retired.
+last_lux_at: float | None = None
 last_cct: float | None = None
+
+# How long a reading stays servable after Home Assistant stops producing new ones. Long
+# enough to ride out a restart or a brief unavailability at POLLING_SECONDS cadence, short
+# enough that a removed or broken entity stops pinning brightness to a value that is no
+# longer true.
+MAX_READING_AGE_SECONDS = 30
 
 
 def local_ip() -> str:
@@ -172,10 +186,19 @@ async def read_entity_state(entity_id: str) -> float | None:
 
 
 async def read_lux() -> float | None:
-    # Nothing configured and nothing auto-discovered: keep serving the last value rather than
-    # throwing on every poll. The startup log says what to fix.
+    """Current lux from Home Assistant, or None when it cannot be read.
+
+    Retries discovery while no entity is known. Home Assistant starts its integrations
+    concurrently with its add-ons, so a cold boot on a Pi routinely has the add-on querying
+    /api/states before the illuminance sensor exists. Discovering only once at startup left
+    the add-on permanently sensor-less until someone restarted it by hand.
+    """
+    global SENSOR_ENTITY_ID
     if not SENSOR_ENTITY_ID:
-        return None
+        SENSOR_ENTITY_ID = await discover_lux_entity()
+        if not SENSOR_ENTITY_ID:
+            return None
+        _LOGGER.info(f"Discovered lux sensor {SENSOR_ENTITY_ID}")
     return await read_entity_state(SENSOR_ENTITY_ID)
 
 
@@ -185,18 +208,47 @@ async def read_color_temperature() -> float | None:
     return await read_entity_state(COLOR_ENTITY_ID)
 
 
-async def make_lux_response():
-    global last_lux
-    lux = None
+async def current_lux() -> float | None:
+    """The last trustworthy reading, or None when there is nothing honest to serve.
+
+    Never invents a value: a fabricated lux figure is indistinguishable from a real one
+    downstream, and Lunar will happily adapt to it.
+    """
+    global last_lux, last_lux_at
     try:
         lux = await read_lux()
     except Exception as exc:
         _LOGGER.exception(exc)
-    if lux is not None and lux != last_lux:
-        _LOGGER.debug(f"Sending {lux} lux")
-        last_lux = lux
+        lux = None
 
-    return {"id": "sensor-ambient_light", "state": f"{last_lux} lx", "value": last_lux}
+    if lux is not None:
+        if lux != last_lux:
+            _LOGGER.debug(f"Sending {lux} lux")
+        last_lux = lux
+        last_lux_at = time.monotonic()
+        return lux
+
+    if last_lux is None:
+        return None
+
+    if time.monotonic() - last_lux_at > MAX_READING_AGE_SECONDS:
+        _LOGGER.warning(
+            f"No reading for over {MAX_READING_AGE_SECONDS}s; reporting the sensor as "
+            f"unavailable instead of continuing to serve {last_lux} lx"
+        )
+        last_lux = None
+        last_lux_at = None
+        return None
+
+    # A recent real reading: still the best answer available during a blip.
+    return last_lux
+
+
+async def make_lux_response():
+    lux = await current_lux()
+    if lux is None:
+        return None
+    return {"id": "sensor-ambient_light", "state": f"{lux} lx", "value": lux}
 
 
 async def make_cct_response():
@@ -221,7 +273,12 @@ async def make_cct_response():
 
 async def sensor_reader(request: Request):
     while not await request.is_disconnected():
-        yield {"event": "state", "data": json.dumps(await make_lux_response())}
+        # Nothing is emitted while there is no reading. Lunar treats silence as "no new
+        # data" and keeps its last value, which is the honest outcome; a synthesized event
+        # would instead be adapted to as though the room had actually changed.
+        lux = await make_lux_response()
+        if lux is not None:
+            yield {"event": "state", "data": json.dumps(lux)}
         if COLOR_ENTITY_ID:
             cct = await make_cct_response()
             if cct is not None:
@@ -232,7 +289,15 @@ async def sensor_reader(request: Request):
 
 @app.get("/sensor/ambient_light")
 async def sensor():
-    return await make_lux_response()
+    response = await make_lux_response()
+    if response is None:
+        # 503 rather than a made-up number. Lunar only adopts a responder that returns a
+        # decodable body with a `value`, so this reads as "add-on present but not ready"
+        # and no brightness decision is made on it.
+        return JSONResponse(
+            {"error": "no ambient light reading available"}, status_code=503
+        )
+    return response
 
 
 @app.get("/sensor/ambient_color_temperature")

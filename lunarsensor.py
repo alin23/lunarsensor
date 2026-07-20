@@ -16,6 +16,7 @@ import logging
 import os
 import socket
 import sys
+import time
 
 import aiohttp
 import uvicorn
@@ -38,8 +39,21 @@ PORT = int(os.getenv("PORT", "80"))
 
 CLIENT = None
 ZEROCONF = None
-last_lux = 400.0
+# None, never a number. This used to be seeded to 400.0 and returned on every failure path,
+# so a sensor that was misconfigured, unwired or throwing served a plausible office reading
+# forever — and nothing downstream could tell it from a real one. Lunar would adapt
+# confidently to a constant. No reading now means no reading: the endpoints answer 503 and
+# the event stream stays quiet.
+last_lux = None
+# Monotonic timestamp of the last REAL reading, so a stale one can be retired.
+last_lux_at = None
 last_cct = None
+
+# How long a reading stays servable after the sensor stops producing new ones. Long enough
+# to ride out a transient blip at POLLING_SECONDS cadence (a sensor that read 300 lux two
+# seconds ago is still about 300 lux), short enough that a dead sensor stops pinning
+# brightness to a value that is no longer true.
+MAX_READING_AGE_SECONDS = 30
 supports_color = False
 # Sensor reads are usually blocking (a file, a serial port, an I2C bus) and several clients
 # can be streaming at once. Serialize them so two readers can't interleave on the same device.
@@ -107,18 +121,47 @@ async def lifespan(app):
 app = FastAPI(lifespan=lifespan)
 
 
-async def make_lux_response():
-    global last_lux
+async def current_lux():
+    """The last trustworthy reading, or None when there is nothing honest to serve.
+
+    Never invents a value: a fabricated lux figure is indistinguishable from a real one
+    downstream, and Lunar will happily adapt to it.
+    """
+    global last_lux, last_lux_at
     try:
         lux = await read_lux()
     except Exception as exc:
         log.exception(exc)
-    else:
-        if lux is not None and lux != last_lux:
-            log.debug(f"Sending {lux} lux")
-            last_lux = lux
+        lux = None
 
-    return {"id": "sensor-ambient_light", "state": f"{last_lux} lx", "value": last_lux}
+    if lux is not None:
+        if lux != last_lux:
+            log.debug(f"Sending {lux} lux")
+        last_lux = lux
+        last_lux_at = time.monotonic()
+        return lux
+
+    if last_lux is None:
+        return None
+
+    if time.monotonic() - last_lux_at > MAX_READING_AGE_SECONDS:
+        log.warning(
+            f"No reading for over {MAX_READING_AGE_SECONDS}s; reporting the sensor as "
+            f"unavailable instead of continuing to serve {last_lux} lx"
+        )
+        last_lux = None
+        last_lux_at = None
+        return None
+
+    # A recent real reading: still the best answer available during a blip.
+    return last_lux
+
+
+async def make_lux_response():
+    lux = await current_lux()
+    if lux is None:
+        return None
+    return {"id": "sensor-ambient_light", "state": f"{lux} lx", "value": lux}
 
 
 async def make_cct_response():
@@ -143,7 +186,12 @@ async def make_cct_response():
 
 async def sensor_reader(request):
     while not await request.is_disconnected():
-        yield {"event": "state", "data": json.dumps(await make_lux_response())}
+        # Nothing is emitted while the sensor has no reading. Lunar treats silence as
+        # "no new data" and keeps its last value, which is the honest outcome; a synthesized
+        # event would instead be adapted to as though the room had actually changed.
+        lux = await make_lux_response()
+        if lux is not None:
+            yield {"event": "state", "data": json.dumps(lux)}
         if supports_color:
             cct = await make_cct_response()
             if cct is not None:
@@ -154,7 +202,15 @@ async def sensor_reader(request):
 
 @app.get("/sensor/ambient_light")
 async def sensor():
-    return await make_lux_response()
+    response = await make_lux_response()
+    if response is None:
+        # 503 rather than a made-up number. Lunar only adopts a responder that returns a
+        # decodable body with a `value`, so this reads as "sensor present but not ready"
+        # and no brightness decision is made on it.
+        return JSONResponse(
+            {"error": "no ambient light reading available"}, status_code=503
+        )
+    return response
 
 
 @app.get("/sensor/ambient_color_temperature")
@@ -179,12 +235,17 @@ def main():
 
 
 def _sync_read_lux():
-    """Blocking part of the reading. Runs in a worker thread, so it's safe to do real I/O here."""
+    """Blocking part of the reading. Runs in a worker thread, so it's safe to do real I/O here.
+
+    Return None when the sensor cannot be read. Do NOT return a placeholder number: the
+    server cannot tell it apart from a real measurement and Lunar will adapt to it.
+    """
     if os.path.exists("/tmp/lux"):
         with open("/tmp/lux") as f:
-            return float(f.read().strip() or "400.0")
+            raw = f.read().strip()
+        return float(raw) if raw else None
 
-    return 400.00
+    return None
 
 
 async def read_lux():
